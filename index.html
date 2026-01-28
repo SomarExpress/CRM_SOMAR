@@ -392,31 +392,49 @@
             [functionName](...args);
         });
       } else {
-        // Modo GitHub Pages (llamadas via fetch)
+        // Modo GitHub Pages - Usar GET con parámetros
         try {
-          const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              function: functionName,
-              parameters: args
-            })
-          });
+          let url = `${SCRIPT_URL}?function=${functionName}`;
           
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+          // Para funciones que necesitan parámetros, convertir a POST con JSONP
+          if (args.length > 0) {
+            // Crear un form data para enviar por POST
+            const formData = new FormData();
+            formData.append('function', functionName);
+            formData.append('parameters', JSON.stringify(args));
+            
+            const response = await fetch(SCRIPT_URL, {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            
+            return data.result;
+          } else {
+            // Para funciones sin parámetros, usar GET simple
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            
+            return data.result;
           }
-          
-          const data = await response.json();
-          
-          if (data.error) {
-            throw new Error(data.error);
-          }
-          
-          return data.result;
         } catch (error) {
           console.error('Error calling Google Script:', error);
           throw error;
