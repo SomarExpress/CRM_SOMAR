@@ -352,6 +352,17 @@
 
   <script>
     // ============================================
+    // CONFIGURACIÓN - IMPORTANTE: ACTUALIZAR ESTA URL
+    // ============================================
+    
+    // URL de tu Google Apps Script Web App
+    // Obténla después de implementar: Implementar > Administrar implementaciones > URL de aplicación web
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbze3FWOWg2En5-MCWEuOisi3ovqPuTJgr59EXjmePf17cUoa_pQw_g5jqYmqNO7LWfi/exec';
+    
+    // Si estás probando localmente con Apps Script, cambia esto a true
+    const USE_GOOGLE_SCRIPT_RUN = false;
+    
+    // ============================================
     // VARIABLES GLOBALES
     // ============================================
 
@@ -366,6 +377,52 @@
         colonias: []
       }
     };
+
+    // ============================================
+    // FUNCIONES DE COMUNICACIÓN CON GOOGLE APPS SCRIPT
+    // ============================================
+
+    async function callGoogleScript(functionName, ...args) {
+      if (USE_GOOGLE_SCRIPT_RUN && typeof google !== 'undefined') {
+        // Modo Google Apps Script nativo (HTML servido desde Apps Script)
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            [functionName](...args);
+        });
+      } else {
+        // Modo GitHub Pages (llamadas via fetch)
+        try {
+          const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              function: functionName,
+              parameters: args
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          return data.result;
+        } catch (error) {
+          console.error('Error calling Google Script:', error);
+          throw error;
+        }
+      }
+    }
 
     // ============================================
     // INICIALIZACIÓN
@@ -404,81 +461,72 @@
     // ============================================
 
     async function cargarClientes() {
-      return new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(response => {
-            if (response.success) {
-              appData.clientes = response.data;
-              appData.clientesFiltrados = response.data;
-              console.log('✅ Clientes cargados:', response.count);
-              renderizarClientes();
-              resolve();
-            } else {
-              reject(new Error(response.error));
-            }
-          })
-          .withFailureHandler(error => {
-            reject(error);
-          })
-          .obtenerClientes();
-      });
+      try {
+        const response = await callGoogleScript('obtenerClientes');
+        
+        if (response.success) {
+          appData.clientes = response.data;
+          appData.clientesFiltrados = response.data;
+          console.log('✅ Clientes cargados:', response.count);
+          renderizarClientes();
+        } else {
+          throw new Error(response.error);
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar clientes:', error);
+        throw error;
+      }
     }
 
     async function cargarFiltros() {
-      return new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(response => {
-            if (response.success) {
-              appData.filtros.ciudades = response.ciudades;
-              appData.filtros.colonias = response.colonias;
-              
-              // Poblar selects
-              const selectCiudad = document.getElementById('filtroCiudad');
-              response.ciudades.forEach(ciudad => {
-                const option = document.createElement('option');
-                option.value = ciudad;
-                option.textContent = ciudad;
-                selectCiudad.appendChild(option);
-              });
-              
-              const selectColonia = document.getElementById('filtroColonia');
-              response.colonias.forEach(colonia => {
-                const option = document.createElement('option');
-                option.value = colonia;
-                option.textContent = colonia;
-                selectColonia.appendChild(option);
-              });
-              
-              console.log('✅ Filtros cargados');
-              resolve();
-            } else {
-              reject(new Error(response.error));
-            }
-          })
-          .withFailureHandler(error => {
-            reject(error);
-          })
-          .obtenerFiltros();
-      });
+      try {
+        const response = await callGoogleScript('obtenerFiltros');
+        
+        if (response.success) {
+          appData.filtros.ciudades = response.ciudades;
+          appData.filtros.colonias = response.colonias;
+          
+          // Poblar selects
+          const selectCiudad = document.getElementById('filtroCiudad');
+          response.ciudades.forEach(ciudad => {
+            const option = document.createElement('option');
+            option.value = ciudad;
+            option.textContent = ciudad;
+            selectCiudad.appendChild(option);
+          });
+          
+          const selectColonia = document.getElementById('filtroColonia');
+          response.colonias.forEach(colonia => {
+            const option = document.createElement('option');
+            option.value = colonia;
+            option.textContent = colonia;
+            selectColonia.appendChild(option);
+          });
+          
+          console.log('✅ Filtros cargados');
+        } else {
+          throw new Error(response.error);
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar filtros:', error);
+        throw error;
+      }
     }
 
     async function cargarHistorial() {
-      return new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(response => {
-            if (response.success) {
-              appData.historial = response.data;
-              console.log('✅ Historial cargado:', response.data.length);
-              resolve();
-            } else {
-              reject(new Error(response.error));
-            }
-          })
-          .withFailureHandler(error => {
-            reject(error);
-          })
-          .obtenerHistorial();
-      });
+      try {
+        const response = await callGoogleScript('obtenerHistorial');
+        
+        if (response.success) {
+          appData.historial = response.data;
+          console.log('✅ Historial cargado:', response.data.length);
+        } else {
+          throw new Error(response.error);
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar historial:', error);
+        throw error;
+      }
     }
 
     // ============================================
@@ -632,12 +680,7 @@
       
       try {
         // Llamar a Google Apps Script
-        const resultado = await new Promise((resolve, reject) => {
-          google.script.run
-            .withSuccessHandler(resolve)
-            .withFailureHandler(reject)
-            .enviarMensajesMasivos(clientesAEnviar, mensaje, appData.imagenUrl);
-        });
+        const resultado = await callGoogleScript('enviarMensajesMasivos', clientesAEnviar, mensaje, appData.imagenUrl);
         
         if (resultado.success) {
           // Actualizar progreso
@@ -711,13 +754,7 @@
           const base64Data = event.target.result;
           
           try {
-            const resultado = await new Promise((res, rej) => {
-              google.script.run
-                .withSuccessHandler(res)
-                .withFailureHandler(rej)
-                .subirImagenCloudinary(base64Data);
-            });
-            
+            const resultado = await callGoogleScript('subirImagenCloudinary', base64Data);
             resolve(resultado);
           } catch (error) {
             resolve({
