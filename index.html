@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#FF8C00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Somar Promos">
+  
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/drkaxsziu/image/upload/v1767871213/Somar_Express_2048_x_2048_px_18_x_18_in__20250623_221102_0000_o0bv7a.png">
+  <link rel="apple-touch-icon" href="https://res.cloudinary.com/drkaxsziu/image/upload/v1767871213/Somar_Express_2048_x_2048_px_18_x_18_in__20250623_221102_0000_o0bv7a.png">
+  
+  <title>Somar Express - Envío de Promos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .brand-orange { color: #FF8C00; }
+    .bg-brand-orange { background-color: #FF8C00; }
+    .brand-black { color: #1A1A1A; }
+    .bg-brand-black { background-color: #1A1A1A; }
+    
+    .loading {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #FFFFFF;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .fade-in { animation: fadeIn 0.4s ease-in; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .scale-in { animation: scaleIn 0.2s ease-out; }
+    @keyframes scaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .selected-client {
+      background: linear-gradient(135deg, #FFF5E6 0%, #FFE8CC 100%);
+      border: 2px solid #FF8C00 !important;
+    }
+
+    .variable-tag {
+      display: inline-block;
+      background: #E6F3FF;
+      border: 1px solid #4A9EFF;
+      color: #1E5BA8;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .variable-tag:hover {
+      background: #4A9EFF;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .status-enviado { background: #D1FAE5; color: #065F46; }
+    .status-pendiente { background: #FEF3C7; color: #92400E; }
+    .status-error { background: #FEE2E2; color: #991B1B; }
+
+    #messagePreview {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .client-card {
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .client-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    @media (max-width: 768px) {
+      #messagePanel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-height: 70vh;
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+      }
+    }
+
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-white sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="https://res.cloudinary.com/drkaxsziu/image/upload/v1767871213/Somar_Express_2048_x_2048_px_18_x_18_in__20250623_221102_0000_o0bv7a.png" alt="Somar Express" class="w-12 h-12 object-contain">
+          <div>
+            <h1 class="font-bold text-lg">📱 Envío de Promos</h1>
+            <p class="text-xs text-gray-500">Marketing WhatsApp</p>
+          </div>
+        </div>
+        
+        <button id="historialBtn" class="p-2 hover:bg-gray-100 rounded-full transition" title="Ver Historial">
+          <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading Screen -->
+  <div id="loading" class="fixed inset-0 bg-gradient-to-br from-orange-500 to-orange-600 flex flex-col justify-center items-center z-50">
+    <img src="https://res.cloudinary.com/drkaxsziu/image/upload/v1767871112/Somar_Express_2048_x_2048_px_18_x_18_in__20250623_221144_0000_fcsl1b.png" alt="Somar Express" class="w-32 h-32 mb-6 animate-pulse">
+    <div class="loading"></div>
+    <p class="text-white mt-4 font-semibold">Cargando clientes...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="hidden">
+    <!-- Stats Banner -->
+    <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p class="text-2xl font-bold" id="totalClientes">0</p>
+            <p class="text-xs opacity-90">Total Clientes</p>
+          </div>
+          <div>
+            <p class="text-2xl font-bold" id="clientesSeleccionados">0</p>
+            <p class="text-xs opacity-90">Seleccionados</p>
+          </div>
+          <div>
+            <p class="text-2xl font-bold" id="enviosHoy">0</p>
+            <p class="text-xs opacity-90">Envíos Hoy</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Left Panel: Client List -->
+        <div class="lg:col-span-2 space-y-4">
+          
+          <!-- Filters -->
+          <div class="bg-white rounded-2xl shadow-sm p-4">
+            <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+              🔍 Filtros
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700">Buscar por nombre</label>
+                <input type="text" id="searchNombre" placeholder="Nombre del cliente..." class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition text-sm">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700">Ciudad</label>
+                <select id="filtroCiudad" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition bg-white text-sm">
+                  <option value="">🌍 Todas las ciudades</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700">Colonia/Sector</label>
+                <select id="filtroColonia" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition bg-white text-sm">
+                  <option value="">🏘️ Todas las colonias</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+              <button id="seleccionarTodos" class="flex-1 bg-blue-500 text-white py-2 rounded-xl font-semibold hover:bg-blue-600 transition text-sm">
+                ✅ Seleccionar Todos
+              </button>
+              <button id="limpiarSeleccion" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-xl font-semibold hover:bg-gray-300 transition text-sm">
+                ❌ Limpiar
+              </button>
+            </div>
+          </div>
+
+          <!-- Client List -->
+          <div class="bg-white rounded-2xl shadow-sm p-4">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="font-bold text-lg flex items-center gap-2">
+                👥 Clientes
+                <span id="clientesMostrados" class="text-sm text-gray-500 font-normal">(0)</span>
+              </h2>
+            </div>
+            
+            <div id="clientesList" class="space-y-2 max-h-[600px] overflow-y-auto">
+              <!-- Clientes se cargan aquí -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Message Editor -->
+        <div id="messagePanel" class="bg-white rounded-2xl shadow-sm p-4 h-fit sticky top-20">
+          <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+            ✉️ Mensaje
+          </h2>
+
+          <!-- Variables disponibles -->
+          <div class="mb-4">
+            <p class="text-xs font-semibold text-gray-600 mb-2">Variables disponibles (clic para insertar):</p>
+            <div class="flex flex-wrap gap-1">
+              <span class="variable-tag" data-var="{{ID}}">ID</span>
+              <span class="variable-tag" data-var="{{NOMBRE}}">NOMBRE</span>
+              <span class="variable-tag" data-var="{{CELULAR}}">CELULAR</span>
+              <span class="variable-tag" data-var="{{CIUDAD}}">CIUDAD</span>
+              <span class="variable-tag" data-var="{{COLONIA/SECTOR}}">COLONIA/SECTOR</span>
+            </div>
+          </div>
+
+          <!-- Textarea -->
+          <div class="mb-4">
+            <label class="block text-sm font-semibold mb-2 text-gray-700">Escribe tu mensaje</label>
+            <textarea id="mensajeTexto" rows="6" placeholder="Ej: Hola {{NOMBRE}}, tenemos promociones especiales en {{CIUDAD}}..." class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-brand-orange focus:outline-none transition text-sm resize-none"></textarea>
+            <p class="text-xs text-gray-500 mt-1">
+              <span id="charCount">0</span> caracteres
+            </p>
+          </div>
+
+          <!-- Upload de imagen -->
+          <div class="mb-4">
+            <label class="block text-sm font-semibold mb-2 text-gray-700">Imagen (opcional)</label>
+            <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-brand-orange transition">
+              <div id="uploadPlaceholder">
+                <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <p class="text-sm text-gray-600">Clic para subir imagen</p>
+                <p class="text-xs text-gray-400 mt-1">JPG, PNG (máx. 5MB)</p>
+              </div>
+              <div id="uploadPreview" class="hidden">
+                <img id="previewImg" src="" class="max-h-40 mx-auto rounded-lg mb-2">
+                <button id="removeImagen" class="text-red-500 text-sm hover:underline">❌ Quitar imagen</button>
+              </div>
+            </div>
+            <input type="file" id="imagenPromo" accept="image/*" class="hidden">
+          </div>
+
+          <!-- Preview -->
+          <div class="mb-4">
+            <p class="text-sm font-semibold mb-2 text-gray-700">Vista previa:</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 min-h-[80px]">
+              <p id="messagePreview" class="text-sm text-gray-700">El mensaje aparecerá aquí...</p>
+            </div>
+          </div>
+
+          <!-- Botón enviar -->
+          <button id="enviarMensajes" disabled class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            Enviar a <span id="countEnviar">0</span> cliente(s)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Historial -->
+  <div id="historialModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden scale-in">
+      <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 flex justify-between items-center">
+        <h2 class="font-bold text-lg">📊 Historial de Envíos</h2>
+        <button id="closeHistorialBtn" class="hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-4">
+        <!-- Filtros de historial -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">Filtrar por fecha</label>
+            <select id="filtroFechaHistorial" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition bg-white text-sm">
+              <option value="todos">Todos</option>
+              <option value="hoy">Hoy</option>
+              <option value="semana">Esta semana</option>
+              <option value="mes">Este mes</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">Buscar</label>
+            <input type="text" id="searchHistorial" placeholder="Buscar en mensajes..." class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition text-sm">
+          </div>
+        </div>
+
+        <!-- Lista de historial -->
+        <div id="historialList" class="space-y-3 max-h-[500px] overflow-y-auto">
+          <!-- Historial se carga aquí -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Progreso -->
+  <div id="progressModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full scale-in">
+      <div class="p-6">
+        <h2 class="font-bold text-xl mb-4 text-center">📤 Enviando mensajes...</h2>
+        
+        <div class="mb-4">
+          <div class="bg-gray-200 rounded-full h-4 overflow-hidden">
+            <div id="progressBar" class="bg-gradient-to-r from-green-500 to-green-600 h-full progress-bar" style="width: 0%"></div>
+          </div>
+          <p class="text-center text-sm text-gray-600 mt-2">
+            <span id="progressText">0 / 0</span>
+          </p>
+        </div>
+
+        <div id="progressDetails" class="bg-gray-50 rounded-xl p-4 max-h-60 overflow-y-auto text-sm space-y-2">
+          <!-- Detalles del progreso -->
+        </div>
+
+        <button id="closeProgressBtn" class="hidden w-full mt-4 bg-brand-orange text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition">
+          ✅ Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // VARIABLES GLOBALES
+    // ============================================
+
+    const appData = {
+      clientes: [],
+      clientesFiltrados: [],
+      clientesSeleccionados: new Set(),
+      historial: [],
+      imagenUrl: null,
+      filtros: {
+        ciudades: [],
+        colonias: []
+      }
+    };
+
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+
+    window.addEventListener('load', async () => {
+      try {
+        // Cargar clientes
+        await cargarClientes();
+        
+        // Cargar filtros
+        await cargarFiltros();
+        
+        // Cargar historial
+        await cargarHistorial();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Ocultar loading
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('mainContent').classList.add('fade-in');
+        
+        // Actualizar estadísticas
+        actualizarEstadisticas();
+        
+      } catch (error) {
+        console.error('❌ Error al inicializar:', error);
+        alert('Error al cargar la aplicación: ' + error.message);
+      }
+    });
+
+    // ============================================
+    // CARGAR DATOS DESDE GOOGLE APPS SCRIPT
+    // ============================================
+
+    async function cargarClientes() {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(response => {
+            if (response.success) {
+              appData.clientes = response.data;
+              appData.clientesFiltrados = response.data;
+              console.log('✅ Clientes cargados:', response.count);
+              renderizarClientes();
+              resolve();
+            } else {
+              reject(new Error(response.error));
+            }
+          })
+          .withFailureHandler(error => {
+            reject(error);
+          })
+          .obtenerClientes();
+      });
+    }
+
+    async function cargarFiltros() {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(response => {
+            if (response.success) {
+              appData.filtros.ciudades = response.ciudades;
+              appData.filtros.colonias = response.colonias;
+              
+              // Poblar selects
+              const selectCiudad = document.getElementById('filtroCiudad');
+              response.ciudades.forEach(ciudad => {
+                const option = document.createElement('option');
+                option.value = ciudad;
+                option.textContent = ciudad;
+                selectCiudad.appendChild(option);
+              });
+              
+              const selectColonia = document.getElementById('filtroColonia');
+              response.colonias.forEach(colonia => {
+                const option = document.createElement('option');
+                option.value = colonia;
+                option.textContent = colonia;
+                selectColonia.appendChild(option);
+              });
+              
+              console.log('✅ Filtros cargados');
+              resolve();
+            } else {
+              reject(new Error(response.error));
+            }
+          })
+          .withFailureHandler(error => {
+            reject(error);
+          })
+          .obtenerFiltros();
+      });
+    }
+
+    async function cargarHistorial() {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(response => {
+            if (response.success) {
+              appData.historial = response.data;
+              console.log('✅ Historial cargado:', response.data.length);
+              resolve();
+            } else {
+              reject(new Error(response.error));
+            }
+          })
+          .withFailureHandler(error => {
+            reject(error);
+          })
+          .obtenerHistorial();
+      });
+    }
+
+    // ============================================
+    // RENDERIZADO
+    // ============================================
+
+    function renderizarClientes() {
+      const container = document.getElementById('clientesList');
+      
+      if (appData.clientesFiltrados.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <p class="text-4xl mb-2">🔍</p>
+            <p class="font-semibold">No se encontraron clientes</p>
+            <p class="text-sm">Intenta ajustar los filtros</p>
+          </div>
+        `;
+        document.getElementById('clientesMostrados').textContent = '(0)';
+        return;
+      }
+      
+      container.innerHTML = appData.clientesFiltrados.map(cliente => {
+        const isSelected = appData.clientesSeleccionados.has(cliente.ID);
+        
+        return `
+          <div class="client-card border-2 ${isSelected ? 'selected-client' : 'border-gray-200'} rounded-xl p-3" onclick="toggleCliente('${cliente.ID}')">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <input type="checkbox" ${isSelected ? 'checked' : ''} class="w-4 h-4 accent-orange-500" onclick="event.stopPropagation()">
+                  <p class="font-bold text-sm">${cliente.NOMBRE || 'Sin nombre'}</p>
+                </div>
+                <p class="text-xs text-gray-600">📱 ${cliente.CELULAR}</p>
+                <p class="text-xs text-gray-500">📍 ${cliente.CIUDAD} - ${cliente['COLONIA/SECTOR'] || 'N/A'}</p>
+              </div>
+              
+              <span class="text-xs px-2 py-1 bg-gray-100 rounded-full font-semibold text-gray-600">
+                #${cliente.ID}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('clientesMostrados').textContent = `(${appData.clientesFiltrados.length})`;
+    }
+
+    // ============================================
+    // FILTROS
+    // ============================================
+
+    function aplicarFiltros() {
+      const nombreBusqueda = document.getElementById('searchNombre').value.toLowerCase();
+      const ciudadFiltro = document.getElementById('filtroCiudad').value;
+      const coloniaFiltro = document.getElementById('filtroColonia').value;
+      
+      appData.clientesFiltrados = appData.clientes.filter(cliente => {
+        const matchNombre = !nombreBusqueda || (cliente.NOMBRE || '').toLowerCase().includes(nombreBusqueda);
+        const matchCiudad = !ciudadFiltro || cliente.CIUDAD === ciudadFiltro;
+        const matchColonia = !coloniaFiltro || cliente['COLONIA/SECTOR'] === coloniaFiltro;
+        
+        return matchNombre && matchCiudad && matchColonia;
+      });
+      
+      renderizarClientes();
+    }
+
+    // ============================================
+    // SELECCIÓN DE CLIENTES
+    // ============================================
+
+    function toggleCliente(clienteId) {
+      if (appData.clientesSeleccionados.has(clienteId)) {
+        appData.clientesSeleccionados.delete(clienteId);
+      } else {
+        appData.clientesSeleccionados.add(clienteId);
+      }
+      
+      renderizarClientes();
+      actualizarEstadisticas();
+      actualizarBotonEnviar();
+    }
+
+    // ============================================
+    // MENSAJE
+    // ============================================
+
+    function actualizarPreview() {
+      const mensaje = document.getElementById('mensajeTexto').value;
+      
+      if (!mensaje) {
+        document.getElementById('messagePreview').textContent = 'El mensaje aparecerá aquí...';
+        return;
+      }
+      
+      // Tomar el primer cliente seleccionado para preview
+      const primeraSeleccion = Array.from(appData.clientesSeleccionados)[0];
+      
+      if (primeraSeleccion) {
+        const cliente = appData.clientes.find(c => c.ID === primeraSeleccion);
+        if (cliente) {
+          let preview = mensaje;
+          
+          // Reemplazar variables
+          preview = preview.replace(/\{\{ID\}\}/g, cliente.ID || '');
+          preview = preview.replace(/\{\{NOMBRE\}\}/g, cliente.NOMBRE || '');
+          preview = preview.replace(/\{\{CELULAR\}\}/g, cliente.CELULAR || '');
+          preview = preview.replace(/\{\{CIUDAD\}\}/g, cliente.CIUDAD || '');
+          preview = preview.replace(/\{\{COLONIA\/SECTOR\}\}/g, cliente['COLONIA/SECTOR'] || '');
+          
+          document.getElementById('messagePreview').textContent = preview;
+          return;
+        }
+      }
+      
+      // Si no hay cliente seleccionado, mostrar con variables
+      document.getElementById('messagePreview').textContent = mensaje;
+    }
+
+    // ============================================
+    // ENVÍO DE MENSAJES
+    // ============================================
+
+    async function enviarMensajesMasivos() {
+      const mensaje = document.getElementById('mensajeTexto').value.trim();
+      
+      if (!mensaje) {
+        alert('⚠️ Debes escribir un mensaje');
+        return;
+      }
+      
+      if (appData.clientesSeleccionados.size === 0) {
+        alert('⚠️ Debes seleccionar al menos un cliente');
+        return;
+      }
+      
+      // Confirmar
+      const confirmar = confirm(`¿Enviar mensaje a ${appData.clientesSeleccionados.size} cliente(s)?`);
+      if (!confirmar) return;
+      
+      // Obtener clientes seleccionados
+      const clientesAEnviar = appData.clientes.filter(c => 
+        appData.clientesSeleccionados.has(c.ID)
+      );
+      
+      // Mostrar modal de progreso
+      document.getElementById('progressModal').classList.remove('hidden');
+      document.getElementById('progressText').textContent = `0 / ${clientesAEnviar.length}`;
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('progressDetails').innerHTML = '<p class="text-gray-500 text-center">Iniciando envío...</p>';
+      
+      try {
+        // Llamar a Google Apps Script
+        const resultado = await new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            .enviarMensajesMasivos(clientesAEnviar, mensaje, appData.imagenUrl);
+        });
+        
+        if (resultado.success) {
+          // Actualizar progreso
+          const { resultados } = resultado;
+          
+          document.getElementById('progressBar').style.width = '100%';
+          document.getElementById('progressText').textContent = `${resultados.total} / ${resultados.total}`;
+          
+          // Mostrar detalles
+          let detallesHTML = `
+            <div class="space-y-2">
+              <p class="font-bold text-green-600">✅ Enviados: ${resultados.exitosos}</p>
+              ${resultados.fallidos > 0 ? `<p class="font-bold text-red-600">❌ Fallidos: ${resultados.fallidos}</p>` : ''}
+              <div class="mt-4 space-y-1 text-xs">
+          `;
+          
+          resultados.detalles.forEach(detalle => {
+            const icono = detalle.estado === 'exitoso' ? '✅' : '❌';
+            const color = detalle.estado === 'exitoso' ? 'text-green-600' : 'text-red-600';
+            detallesHTML += `
+              <p class="${color}">
+                ${icono} ${detalle.cliente}: ${detalle.mensaje}
+              </p>
+            `;
+          });
+          
+          detallesHTML += '</div></div>';
+          
+          document.getElementById('progressDetails').innerHTML = detallesHTML;
+          document.getElementById('closeProgressBtn').classList.remove('hidden');
+          
+          // Recargar historial
+          await cargarHistorial();
+          actualizarEstadisticas();
+          
+          // Limpiar formulario
+          document.getElementById('mensajeTexto').value = '';
+          document.getElementById('imagenPromo').value = '';
+          document.getElementById('uploadPlaceholder').classList.remove('hidden');
+          document.getElementById('uploadPreview').classList.add('hidden');
+          appData.imagenUrl = null;
+          appData.clientesSeleccionados.clear();
+          renderizarClientes();
+          actualizarBotonEnviar();
+          actualizarPreview();
+          
+        } else {
+          throw new Error(resultado.error);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error al enviar:', error);
+        document.getElementById('progressDetails').innerHTML = `
+          <div class="text-red-600 text-center">
+            <p class="font-bold">❌ Error</p>
+            <p class="text-sm mt-2">${error.message}</p>
+          </div>
+        `;
+        document.getElementById('closeProgressBtn').classList.remove('hidden');
+      }
+    }
+
+    // ============================================
+    // SUBIR IMAGEN
+    // ============================================
+
+    async function subirImagenCloudinary(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64Data = event.target.result;
+          
+          try {
+            const resultado = await new Promise((res, rej) => {
+              google.script.run
+                .withSuccessHandler(res)
+                .withFailureHandler(rej)
+                .subirImagenCloudinary(base64Data);
+            });
+            
+            resolve(resultado);
+          } catch (error) {
+            resolve({
+              success: false,
+              error: error.message
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ============================================
+    // HISTORIAL
+    // ============================================
+
+    function renderizarHistorial() {
+      const container = document.getElementById('historialList');
+      const filtroFecha = document.getElementById('filtroFechaHistorial').value;
+      const busqueda = document.getElementById('searchHistorial').value.toLowerCase();
+      
+      let historialFiltrado = appData.historial;
+      
+      // Filtrar por fecha
+      if (filtroFecha !== 'todos') {
+        const hoy = new Date();
+        historialFiltrado = historialFiltrado.filter(entrada => {
+          const fechaEntrada = new Date(entrada.fecha);
+          
+          if (filtroFecha === 'hoy') {
+            return fechaEntrada.toDateString() === hoy.toDateString();
+          } else if (filtroFecha === 'semana') {
+            const unaSemanaAtras = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return fechaEntrada >= unaSemanaAtras;
+          } else if (filtroFecha === 'mes') {
+            return fechaEntrada.getMonth() === hoy.getMonth() && 
+                   fechaEntrada.getFullYear() === hoy.getFullYear();
+          }
+        });
+      }
+      
+      // Filtrar por búsqueda
+      if (busqueda) {
+        historialFiltrado = historialFiltrado.filter(entrada =>
+          entrada.mensaje.toLowerCase().includes(busqueda)
+        );
+      }
+      
+      if (historialFiltrado.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <p class="text-4xl mb-2">📭</p>
+            <p class="font-semibold">No hay envíos registrados</p>
+            <p class="text-sm mt-2">Los envíos que realices aparecerán aquí</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = historialFiltrado.map(entrada => {
+        const fecha = new Date(entrada.fecha);
+        const fechaStr = fecha.toLocaleDateString('es-GT', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        return `
+          <div class="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-brand-orange transition">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <p class="text-xs text-gray-500">${fechaStr}</p>
+                <p class="font-bold text-sm mt-1">📤 ${entrada.clientesCount} destinatario(s)</p>
+              </div>
+              <div class="flex gap-2">
+                <span class="status-enviado px-3 py-1 rounded-full text-xs font-bold">
+                  ✅ ${entrada.exitosos}
+                </span>
+                ${entrada.fallidos > 0 ? `
+                  <span class="status-error px-3 py-1 rounded-full text-xs font-bold">
+                    ❌ ${entrada.fallidos}
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-3 mb-3">
+              <p class="text-sm text-gray-800 whitespace-pre-wrap">${entrada.mensaje}</p>
+            </div>
+            
+            ${entrada.imagenUrl ? `
+              <div class="mb-3">
+                <img src="${entrada.imagenUrl}" class="rounded-lg max-h-32 object-cover">
+              </div>
+            ` : ''}
+            
+            <details class="text-xs">
+              <summary class="cursor-pointer text-brand-orange font-semibold hover:underline">
+                Ver destinatarios (${entrada.clientes.length})
+              </summary>
+              <div class="mt-2 space-y-1">
+                ${entrada.clientes.map(c => `
+                  <p class="text-gray-600">• ${c.NOMBRE} - ${c.CELULAR}</p>
+                `).join('')}
+              </div>
+            </details>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ============================================
+    // ESTADÍSTICAS
+    // ============================================
+
+    function actualizarEstadisticas() {
+      document.getElementById('totalClientes').textContent = appData.clientes.length;
+      document.getElementById('clientesSeleccionados').textContent = appData.clientesSeleccionados.size;
+      
+      // Envíos hoy
+      const hoy = new Date().toISOString().split('T')[0];
+      const enviosHoy = appData.historial.filter(h => {
+        const fechaEntrada = new Date(h.fecha).toISOString().split('T')[0];
+        return fechaEntrada === hoy;
+      }).reduce((sum, h) => sum + h.exitosos, 0);
+      
+      document.getElementById('enviosHoy').textContent = enviosHoy;
+    }
+
+    function actualizarBotonEnviar() {
+      const btn = document.getElementById('enviarMensajes');
+      const count = appData.clientesSeleccionados.size;
+      
+      document.getElementById('countEnviar').textContent = count;
+      btn.disabled = count === 0;
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+
+    function setupEventListeners() {
+      // Filtros
+      document.getElementById('searchNombre').addEventListener('input', aplicarFiltros);
+      document.getElementById('filtroCiudad').addEventListener('change', aplicarFiltros);
+      document.getElementById('filtroColonia').addEventListener('change', aplicarFiltros);
+      
+      // Selección
+      document.getElementById('seleccionarTodos').addEventListener('click', () => {
+        appData.clientesFiltrados.forEach(c => appData.clientesSeleccionados.add(c.ID));
+        renderizarClientes();
+        actualizarEstadisticas();
+        actualizarBotonEnviar();
+      });
+      
+      document.getElementById('limpiarSeleccion').addEventListener('click', () => {
+        appData.clientesSeleccionados.clear();
+        renderizarClientes();
+        actualizarEstadisticas();
+        actualizarBotonEnviar();
+      });
+      
+      // Mensaje
+      const mensajeTexto = document.getElementById('mensajeTexto');
+      mensajeTexto.addEventListener('input', () => {
+        document.getElementById('charCount').textContent = mensajeTexto.value.length;
+        actualizarPreview();
+      });
+      
+      // Variables
+      document.querySelectorAll('.variable-tag').forEach(tag => {
+        tag.addEventListener('click', () => {
+          const variable = tag.dataset.var;
+          const textarea = document.getElementById('mensajeTexto');
+          const cursorPos = textarea.selectionStart;
+          const textBefore = textarea.value.substring(0, cursorPos);
+          const textAfter = textarea.value.substring(cursorPos);
+          
+          textarea.value = textBefore + variable + textAfter;
+          textarea.focus();
+          textarea.setSelectionRange(cursorPos + variable.length, cursorPos + variable.length);
+          
+          document.getElementById('charCount').textContent = textarea.value.length;
+          actualizarPreview();
+        });
+      });
+      
+      // Imagen
+      document.getElementById('uploadArea').addEventListener('click', () => {
+        document.getElementById('imagenPromo').click();
+      });
+      
+      document.getElementById('imagenPromo').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+          alert('⚠️ Imagen muy grande. Máximo 5MB');
+          e.target.value = '';
+          return;
+        }
+        
+        // Preview local
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.getElementById('previewImg').src = event.target.result;
+          document.getElementById('uploadPlaceholder').classList.add('hidden');
+          document.getElementById('uploadPreview').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+        
+        // Subir a Cloudinary
+        const resultado = await subirImagenCloudinary(file);
+        if (resultado.success) {
+          appData.imagenUrl = resultado.url;
+          console.log('✅ Imagen subida:', resultado.url);
+        } else {
+          alert('⚠️ Error al subir imagen: ' + resultado.error);
+          e.target.value = '';
+          document.getElementById('uploadPlaceholder').classList.remove('hidden');
+          document.getElementById('uploadPreview').classList.add('hidden');
+        }
+      });
+      
+      document.getElementById('removeImagen').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('imagenPromo').value = '';
+        document.getElementById('uploadPlaceholder').classList.remove('hidden');
+        document.getElementById('uploadPreview').classList.add('hidden');
+        appData.imagenUrl = null;
+      });
+      
+      // Enviar
+      document.getElementById('enviarMensajes').addEventListener('click', enviarMensajesMasivos);
+      
+      // Historial
+      document.getElementById('historialBtn').addEventListener('click', () => {
+        document.getElementById('historialModal').classList.remove('hidden');
+        renderizarHistorial();
+      });
+      
+      document.getElementById('closeHistorialBtn').addEventListener('click', () => {
+        document.getElementById('historialModal').classList.add('hidden');
+      });
+      
+      document.getElementById('filtroFechaHistorial').addEventListener('change', renderizarHistorial);
+      document.getElementById('searchHistorial').addEventListener('input', renderizarHistorial);
+      
+      // Progreso
+      document.getElementById('closeProgressBtn').addEventListener('click', () => {
+        document.getElementById('progressModal').classList.add('hidden');
+        location.reload();
+      });
+    }
+  </script>
+</body>
+</html>
