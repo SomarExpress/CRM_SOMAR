@@ -362,6 +362,14 @@
     // Si estás probando localmente con Apps Script, cambia esto a true
     const USE_GOOGLE_SCRIPT_RUN = false;
     
+    // Validar configuración al cargar
+    if (!USE_GOOGLE_SCRIPT_RUN && SCRIPT_URL.includes('TU_SCRIPT_ID_AQUI')) {
+      console.error('❌ ERROR DE CONFIGURACIÓN');
+      console.error('Debes actualizar SCRIPT_URL en la línea 360 del HTML');
+      console.error('Busca: const SCRIPT_URL = ...');
+      alert('⚠️ CONFIGURACIÓN INCOMPLETA\n\nDebes actualizar la URL del Google Apps Script en el archivo HTML.\n\nBusca la línea 360 y reemplaza TU_SCRIPT_ID_AQUI con tu URL real.');
+    }
+    
     // ============================================
     // VARIABLES GLOBALES
     // ============================================
@@ -383,6 +391,11 @@
     // ============================================
 
     async function callGoogleScript(functionName, ...args) {
+      // Validar URL
+      if (!USE_GOOGLE_SCRIPT_RUN && SCRIPT_URL.includes('TU_SCRIPT_ID_AQUI')) {
+        throw new Error('URL del Google Apps Script no configurada. Revisa la línea 360 del HTML.');
+      }
+      
       if (USE_GOOGLE_SCRIPT_RUN && typeof google !== 'undefined') {
         // Modo Google Apps Script nativo (HTML servido desde Apps Script)
         return new Promise((resolve, reject) => {
@@ -396,47 +409,61 @@
         try {
           let url = `${SCRIPT_URL}?function=${functionName}`;
           
-          // Para funciones que necesitan parámetros, convertir a POST con JSONP
+          console.log(`📡 Llamando a: ${functionName}`);
+          
+          // Para funciones que necesitan parámetros, convertir a POST con FormData
           if (args.length > 0) {
             // Crear un form data para enviar por POST
             const formData = new FormData();
             formData.append('function', functionName);
             formData.append('parameters', JSON.stringify(args));
             
+            console.log(`📦 Con parámetros:`, args.length, 'argumentos');
+            
             const response = await fetch(SCRIPT_URL, {
               method: 'POST',
-              body: formData
+              body: formData,
+              redirect: 'follow'
             });
             
             if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
+            console.log(`✅ Respuesta recibida`);
             
             if (data.error) {
+              console.error('❌ Error del servidor:', data.error);
               throw new Error(data.error);
             }
             
             return data.result;
           } else {
             // Para funciones sin parámetros, usar GET simple
-            const response = await fetch(url);
+            const response = await fetch(url, {
+              method: 'GET',
+              redirect: 'follow'
+            });
             
             if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
+            console.log(`✅ Respuesta recibida`);
             
             if (data.error) {
+              console.error('❌ Error del servidor:', data.error);
               throw new Error(data.error);
             }
             
             return data.result;
           }
         } catch (error) {
-          console.error('Error calling Google Script:', error);
+          console.error('❌ Error calling Google Script:', error);
+          console.error('Función:', functionName);
+          console.error('URL:', SCRIPT_URL);
           throw error;
         }
       }
