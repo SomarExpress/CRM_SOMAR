@@ -405,24 +405,25 @@
             [functionName](...args);
         });
       } else {
-        // Modo GitHub Pages - Usar GET con parámetros
+        // Modo GitHub Pages
         try {
-          let url = `${SCRIPT_URL}?function=${functionName}`;
-          
           console.log(`📡 Llamando a: ${functionName}`);
           
-          // Para funciones que necesitan parámetros, convertir a POST con FormData
+          // Para funciones que necesitan parámetros, usar URLSearchParams
           if (args.length > 0) {
-            // Crear un form data para enviar por POST
-            const formData = new FormData();
-            formData.append('function', functionName);
-            formData.append('parameters', JSON.stringify(args));
+            console.log(`📦 Con ${args.length} argumento(s)`);
             
-            console.log(`📦 Con parámetros:`, args.length, 'argumentos');
+            // Usar URLSearchParams para mejor compatibilidad
+            const params = new URLSearchParams();
+            params.append('function', functionName);
+            params.append('parameters', JSON.stringify(args));
             
             const response = await fetch(SCRIPT_URL, {
               method: 'POST',
-              body: formData,
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: params.toString(),
               redirect: 'follow'
             });
             
@@ -441,6 +442,7 @@
             return data.result;
           } else {
             // Para funciones sin parámetros, usar GET simple
+            const url = `${SCRIPT_URL}?function=${functionName}`;
             const response = await fetch(url, {
               method: 'GET',
               redirect: 'follow'
