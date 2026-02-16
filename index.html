@@ -373,6 +373,12 @@
     const BUILDERBOT_API = 'https://app.builderbot.cloud/api/v2/72940379-becf-4dec-8233-2d4bd1de6e1c/messages';
     const BUILDERBOT_KEY = 'bb-32307901-f2b8-4ac2-a849-68a02b24f43f';
     
+    // ⏱️ DELAY ENTRE ENVÍOS (en segundos)
+    // Recomendado: 10-15 segundos para evitar bloqueo de WhatsApp
+    // Mínimo: 5 segundos
+    // Máximo: 30 segundos
+    const DELAY_ENTRE_ENVIOS = 10; // segundos
+    
     // Cloudinary Config
     const CLOUDINARY_CLOUD_NAME = 'drkaxsziu';
     const CLOUDINARY_UPLOAD_PRESET = 'PROMOS_SOMAR';
@@ -755,7 +761,11 @@
       document.getElementById('progressCount').textContent = '0';
       document.getElementById('progressTotal').textContent = clientesAEnviar.length;
       document.getElementById('progressBar').style.width = '0%';
-      document.getElementById('progressLog').innerHTML = '<p class="text-gray-500 text-center text-sm">Iniciando envío...</p>';
+      document.getElementById('progressLog').innerHTML = `
+        <p class="text-gray-500 text-center text-sm">Iniciando envío...</p>
+        <p class="text-blue-600 text-center text-xs mt-2">⏱️ Delay de ${DELAY_ENTRE_ENVIOS}s entre cada envío</p>
+        <p class="text-gray-400 text-center text-xs">(Para evitar bloqueo de WhatsApp)</p>
+      `;
       document.getElementById('closeProgressBtn').disabled = true;
       
       let exitosos = 0;
@@ -820,8 +830,31 @@
         // Scroll al final del log
         document.getElementById('progressLog').scrollTop = document.getElementById('progressLog').scrollHeight;
         
-        // Delay entre envíos
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Delay entre envíos (10 segundos para evitar bloqueo de WhatsApp)
+        // Solo hacer delay si NO es el último cliente
+        if (i < clientesAEnviar.length - 1) {
+          // Mostrar contador de delay
+          const delaySeconds = DELAY_ENTRE_ENVIOS;
+          for (let countdown = delaySeconds; countdown > 0; countdown--) {
+            const delayMsg = document.createElement('div');
+            delayMsg.className = 'text-xs text-gray-500 text-center';
+            delayMsg.textContent = `⏳ Esperando ${countdown}s antes del siguiente envío...`;
+            delayMsg.id = 'countdown-msg';
+            
+            // Remover mensaje anterior si existe
+            const oldMsg = document.getElementById('countdown-msg');
+            if (oldMsg) oldMsg.remove();
+            
+            document.getElementById('progressLog').appendChild(delayMsg);
+            document.getElementById('progressLog').scrollTop = document.getElementById('progressLog').scrollHeight;
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          // Remover el mensaje de countdown
+          const finalMsg = document.getElementById('countdown-msg');
+          if (finalMsg) finalMsg.remove();
+        }
       }
       
       // Guardar en historial
