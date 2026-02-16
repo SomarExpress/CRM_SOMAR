@@ -352,23 +352,19 @@
 
   <script>
     // ============================================
-    // CONFIGURACIÓN - IMPORTANTE: ACTUALIZAR ESTA URL
+    // CONFIGURACIÓN
     // ============================================
     
-    // URL de tu Google Apps Script Web App
-    // Obténla después de implementar: Implementar > Administrar implementaciones > URL de aplicación web
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbze3FWOWg2En5-MCWEuOisi3ovqPuTJgr59EXjmePf17cUoa_pQw_g5jqYmqNO7LWfi/exec';
+    // ⚠️ IMPORTANTE: Actualiza esta URL después de implementar CODE-PROMOS.gs
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzF3Zcz1cEIQ7oJqCkZUuOreoDJq8TiLJdd0VqZ4md4KIxHBy7eMZ8lDqAU3gLP0hdJkQ/exec';
     
-    // Si estás probando localmente con Apps Script, cambia esto a true
-    const USE_GOOGLE_SCRIPT_RUN = false;
+    // BuilderBot API Config
+    const BUILDERBOT_API = 'https://app.builderbot.cloud/api/v2/72940379-becf-4dec-8233-2d4bd1de6e1c/messages';
+    const BUILDERBOT_KEY = 'bb-32307901-f2b8-4ac2-a849-68a02b24f43f';
     
-    // Validar configuración al cargar
-    if (!USE_GOOGLE_SCRIPT_RUN && SCRIPT_URL.includes('TU_SCRIPT_ID_AQUI')) {
-      console.error('❌ ERROR DE CONFIGURACIÓN');
-      console.error('Debes actualizar SCRIPT_URL en la línea 360 del HTML');
-      console.error('Busca: const SCRIPT_URL = ...');
-      alert('⚠️ CONFIGURACIÓN INCOMPLETA\n\nDebes actualizar la URL del Google Apps Script en el archivo HTML.\n\nBusca la línea 360 y reemplaza TU_SCRIPT_ID_AQUI con tu URL real.');
-    }
+    // Cloudinary Config
+    const CLOUDINARY_CLOUD_NAME = 'drkaxsziu';
+    const CLOUDINARY_UPLOAD_PRESET = 'PROMOS_SOMAR';
     
     // ============================================
     // VARIABLES GLOBALES
@@ -387,198 +383,147 @@
     };
 
     // ============================================
-    // FUNCIONES DE COMUNICACIÓN CON GOOGLE APPS SCRIPT
-    // ============================================
-
-    async function callGoogleScript(functionName, ...args) {
-      // Validar URL
-      if (!USE_GOOGLE_SCRIPT_RUN && SCRIPT_URL.includes('TU_SCRIPT_ID_AQUI')) {
-        throw new Error('URL del Google Apps Script no configurada. Revisa la línea 360 del HTML.');
-      }
-      
-      if (USE_GOOGLE_SCRIPT_RUN && typeof google !== 'undefined') {
-        // Modo Google Apps Script nativo (HTML servido desde Apps Script)
-        return new Promise((resolve, reject) => {
-          google.script.run
-            .withSuccessHandler(resolve)
-            .withFailureHandler(reject)
-            [functionName](...args);
-        });
-      } else {
-        // Modo GitHub Pages
-        try {
-          console.log(`📡 Llamando a: ${functionName}`);
-          
-          // Para funciones que necesitan parámetros, usar URLSearchParams
-          if (args.length > 0) {
-            console.log(`📦 Con ${args.length} argumento(s)`);
-            
-            // Usar URLSearchParams para mejor compatibilidad
-            const params = new URLSearchParams();
-            params.append('function', functionName);
-            params.append('parameters', JSON.stringify(args));
-            
-            const response = await fetch(SCRIPT_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: params.toString(),
-              redirect: 'follow'
-            });
-            
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log(`✅ Respuesta recibida`);
-            
-            if (data.error) {
-              console.error('❌ Error del servidor:', data.error);
-              throw new Error(data.error);
-            }
-            
-            return data.result;
-          } else {
-            // Para funciones sin parámetros, usar GET simple
-            const url = `${SCRIPT_URL}?function=${functionName}`;
-            const response = await fetch(url, {
-              method: 'GET',
-              redirect: 'follow'
-            });
-            
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log(`✅ Respuesta recibida`);
-            
-            if (data.error) {
-              console.error('❌ Error del servidor:', data.error);
-              throw new Error(data.error);
-            }
-            
-            return data.result;
-          }
-        } catch (error) {
-          console.error('❌ Error calling Google Script:', error);
-          console.error('Función:', functionName);
-          console.error('URL:', SCRIPT_URL);
-          throw error;
-        }
-      }
-    }
-
-    // ============================================
     // INICIALIZACIÓN
     // ============================================
 
-    window.addEventListener('load', async () => {
-      try {
-        // Cargar clientes
-        await cargarClientes();
-        
-        // Cargar filtros
-        await cargarFiltros();
-        
-        // Cargar historial
-        await cargarHistorial();
-        
-        // Setup event listeners
-        setupEventListeners();
-        
-        // Ocultar loading
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
-        document.getElementById('mainContent').classList.add('fade-in');
-        
-        // Actualizar estadísticas
-        actualizarEstadisticas();
-        
-      } catch (error) {
-        console.error('❌ Error al inicializar:', error);
-        alert('Error al cargar la aplicación: ' + error.message);
-      }
+    window.addEventListener('DOMContentLoaded', async () => {
+      await cargarClientes();
+      cargarHistorialLocal();
+      setupEventListeners();
+      actualizarEstadisticas();
     });
 
     // ============================================
-    // CARGAR DATOS DESDE GOOGLE APPS SCRIPT
+    // CARGAR DATOS
     // ============================================
 
     async function cargarClientes() {
       try {
-        const response = await callGoogleScript('obtenerClientes');
+        console.log('📋 Cargando clientes...');
         
-        if (response.success) {
-          appData.clientes = response.data;
-          appData.clientesFiltrados = response.data;
-          console.log('✅ Clientes cargados:', response.count);
+        const url = `${SCRIPT_URL}?action=getClientes`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('📥 Respuesta recibida:', result);
+        
+        if (result.success) {
+          appData.clientes = result.clientes || [];
+          appData.clientesFiltrados = [...appData.clientes];
+          
+          poblarFiltros();
           renderizarClientes();
+          
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('mainContent').classList.remove('hidden');
+          
+          actualizarEstadisticas();
+          
+          console.log(`✅ ${appData.clientes.length} clientes cargados`);
         } else {
-          throw new Error(response.error);
+          throw new Error(result.error || 'Error desconocido');
         }
       } catch (error) {
-        console.error('❌ Error al cargar clientes:', error);
-        throw error;
+        console.error('❌ Error cargando clientes:', error);
+        document.getElementById('loading').innerHTML = `
+          <div class="text-white text-center p-8">
+            <p class="text-2xl mb-4">❌ Error al cargar</p>
+            <p class="mb-4">${error.message}</p>
+            <button onclick="location.reload()" class="bg-white text-orange-600 px-6 py-2 rounded-lg font-bold">
+              Reintentar
+            </button>
+          </div>
+        `;
       }
     }
 
-    async function cargarFiltros() {
-      try {
-        const response = await callGoogleScript('obtenerFiltros');
-        
-        if (response.success) {
-          appData.filtros.ciudades = response.ciudades;
-          appData.filtros.colonias = response.colonias;
-          
-          // Poblar selects
-          const selectCiudad = document.getElementById('filtroCiudad');
-          response.ciudades.forEach(ciudad => {
-            const option = document.createElement('option');
-            option.value = ciudad;
-            option.textContent = ciudad;
-            selectCiudad.appendChild(option);
-          });
-          
-          const selectColonia = document.getElementById('filtroColonia');
-          response.colonias.forEach(colonia => {
-            const option = document.createElement('option');
-            option.value = colonia;
-            option.textContent = colonia;
-            selectColonia.appendChild(option);
-          });
-          
-          console.log('✅ Filtros cargados');
-        } else {
-          throw new Error(response.error);
-        }
-      } catch (error) {
-        console.error('❌ Error al cargar filtros:', error);
-        throw error;
-      }
+    function poblarFiltros() {
+      const ciudades = [...new Set(appData.clientes.map(c => c.CIUDAD).filter(Boolean))].sort();
+      const colonias = [...new Set(appData.clientes.map(c => c['COLONIA/SECTOR']).filter(Boolean))].sort();
+      
+      const selectCiudad = document.getElementById('filtroCiudad');
+      const selectColonia = document.getElementById('filtroColonia');
+      
+      ciudades.forEach(ciudad => {
+        const option = document.createElement('option');
+        option.value = ciudad;
+        option.textContent = ciudad;
+        selectCiudad.appendChild(option);
+      });
+      
+      colonias.forEach(colonia => {
+        const option = document.createElement('option');
+        option.value = colonia;
+        option.textContent = colonia;
+        selectColonia.appendChild(option);
+      });
     }
 
-    async function cargarHistorial() {
-      try {
-        const response = await callGoogleScript('obtenerHistorial');
-        
-        if (response.success) {
-          appData.historial = response.data;
-          console.log('✅ Historial cargado:', response.data.length);
-        } else {
-          throw new Error(response.error);
+    function cargarHistorialLocal() {
+      const historialGuardado = localStorage.getItem('somarPromoHistorial');
+      if (historialGuardado) {
+        try {
+          appData.historial = JSON.parse(historialGuardado);
+        } catch (error) {
+          appData.historial = [];
         }
-      } catch (error) {
-        console.error('❌ Error al cargar historial:', error);
-        throw error;
       }
     }
 
     // ============================================
-    // RENDERIZADO
+    // FILTROS Y SELECCIÓN
     // ============================================
+
+    function aplicarFiltros() {
+      const searchNombre = document.getElementById('searchNombre').value.toLowerCase();
+      const filtroCiudad = document.getElementById('filtroCiudad').value;
+      const filtroColonia = document.getElementById('filtroColonia').value;
+      
+      appData.clientesFiltrados = appData.clientes.filter(cliente => {
+        const matchNombre = !searchNombre || cliente.NOMBRE.toLowerCase().includes(searchNombre);
+        const matchCiudad = !filtroCiudad || cliente.CIUDAD === filtroCiudad;
+        const matchColonia = !filtroColonia || cliente['COLONIA/SECTOR'] === filtroColonia;
+        
+        return matchNombre && matchCiudad && matchColonia;
+      });
+      
+      renderizarClientes();
+      actualizarEstadisticas();
+    }
+
+    function toggleCliente(clienteId) {
+      const id = parseInt(clienteId) || clienteId;
+      
+      if (appData.clientesSeleccionados.has(id)) {
+        appData.clientesSeleccionados.delete(id);
+      } else {
+        appData.clientesSeleccionados.add(id);
+      }
+      
+      renderizarClientes();
+      actualizarEstadisticas();
+      actualizarBotonEnviar();
+    }
+
+    function seleccionarTodos() {
+      appData.clientesFiltrados.forEach(c => {
+        appData.clientesSeleccionados.add(c.ID);
+      });
+      renderizarClientes();
+      actualizarEstadisticas();
+      actualizarBotonEnviar();
+    }
+
+    function limpiarSeleccion() {
+      appData.clientesSeleccionados.clear();
+      renderizarClientes();
+      actualizarEstadisticas();
+      actualizarBotonEnviar();
+    }
 
     function renderizarClientes() {
       const container = document.getElementById('clientesList');
@@ -721,72 +666,149 @@
       
       // Mostrar modal de progreso
       document.getElementById('progressModal').classList.remove('hidden');
-      document.getElementById('progressText').textContent = `0 / ${clientesAEnviar.length}`;
+      document.getElementById('progressCount').textContent = '0';
+      document.getElementById('progressTotal').textContent = clientesAEnviar.length;
       document.getElementById('progressBar').style.width = '0%';
-      document.getElementById('progressDetails').innerHTML = '<p class="text-gray-500 text-center">Iniciando envío...</p>';
+      document.getElementById('progressLog').innerHTML = '<p class="text-gray-500 text-center text-sm">Iniciando envío...</p>';
+      document.getElementById('closeProgressBtn').disabled = true;
       
-      try {
-        // Llamar a Google Apps Script
-        const resultado = await callGoogleScript('enviarMensajesMasivos', clientesAEnviar, mensaje, appData.imagenUrl);
+      let exitosos = 0;
+      let fallidos = 0;
+      const detalles = [];
+      
+      for (let i = 0; i < clientesAEnviar.length; i++) {
+        const cliente = clientesAEnviar[i];
         
-        if (resultado.success) {
-          // Actualizar progreso
-          const { resultados } = resultado;
+        // Personalizar mensaje
+        let mensajePersonalizado = mensaje
+          .replace(/\{NOMBRE\}/g, cliente.NOMBRE || '')
+          .replace(/\{CIUDAD\}/g, cliente.CIUDAD || '')
+          .replace(/\{COLONIA\}/g, cliente['COLONIA/SECTOR'] || '');
+        
+        // Enviar a BuilderBot
+        try {
+          const resultado = await enviarWhatsApp(cliente.CELULAR, mensajePersonalizado, appData.imagenUrl);
           
-          document.getElementById('progressBar').style.width = '100%';
-          document.getElementById('progressText').textContent = `${resultados.total} / ${resultados.total}`;
-          
-          // Mostrar detalles
-          let detallesHTML = `
-            <div class="space-y-2">
-              <p class="font-bold text-green-600">✅ Enviados: ${resultados.exitosos}</p>
-              ${resultados.fallidos > 0 ? `<p class="font-bold text-red-600">❌ Fallidos: ${resultados.fallidos}</p>` : ''}
-              <div class="mt-4 space-y-1 text-xs">
-          `;
-          
-          resultados.detalles.forEach(detalle => {
-            const icono = detalle.estado === 'exitoso' ? '✅' : '❌';
-            const color = detalle.estado === 'exitoso' ? 'text-green-600' : 'text-red-600';
-            detallesHTML += `
-              <p class="${color}">
-                ${icono} ${detalle.cliente}: ${detalle.mensaje}
-              </p>
+          if (resultado.success) {
+            exitosos++;
+            detalles.push({
+              cliente: cliente.NOMBRE,
+              estado: 'exitoso',
+              mensaje: 'Enviado correctamente'
+            });
+            
+            // Log en el modal
+            const logEntry = document.createElement('div');
+            logEntry.className = 'flex items-start gap-2 text-sm';
+            logEntry.innerHTML = `
+              <span class="text-green-600">✅</span>
+              <span class="text-gray-700">${cliente.NOMBRE}</span>
             `;
+            document.getElementById('progressLog').appendChild(logEntry);
+          } else {
+            throw new Error(resultado.error || 'Error desconocido');
+          }
+        } catch (error) {
+          fallidos++;
+          detalles.push({
+            cliente: cliente.NOMBRE,
+            estado: 'fallido',
+            mensaje: error.message
           });
           
-          detallesHTML += '</div></div>';
-          
-          document.getElementById('progressDetails').innerHTML = detallesHTML;
-          document.getElementById('closeProgressBtn').classList.remove('hidden');
-          
-          // Recargar historial
-          await cargarHistorial();
-          actualizarEstadisticas();
-          
-          // Limpiar formulario
-          document.getElementById('mensajeTexto').value = '';
-          document.getElementById('imagenPromo').value = '';
-          document.getElementById('uploadPlaceholder').classList.remove('hidden');
-          document.getElementById('uploadPreview').classList.add('hidden');
-          appData.imagenUrl = null;
-          appData.clientesSeleccionados.clear();
-          renderizarClientes();
-          actualizarBotonEnviar();
-          actualizarPreview();
-          
-        } else {
-          throw new Error(resultado.error);
+          // Log en el modal
+          const logEntry = document.createElement('div');
+          logEntry.className = 'flex items-start gap-2 text-sm';
+          logEntry.innerHTML = `
+            <span class="text-red-600">❌</span>
+            <span class="text-gray-700">${cliente.NOMBRE}</span>
+          `;
+          document.getElementById('progressLog').appendChild(logEntry);
         }
         
+        // Actualizar progreso
+        const progreso = ((i + 1) / clientesAEnviar.length) * 100;
+        document.getElementById('progressBar').style.width = progreso + '%';
+        document.getElementById('progressCount').textContent = i + 1;
+        
+        // Scroll al final del log
+        document.getElementById('progressLog').scrollTop = document.getElementById('progressLog').scrollHeight;
+        
+        // Delay entre envíos
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // Guardar en historial
+      guardarEnHistorial({
+        fecha: new Date().toISOString(),
+        mensaje: mensaje,
+        imagenUrl: appData.imagenUrl,
+        totalDestinatarios: clientesAEnviar.length,
+        exitosos: exitosos,
+        fallidos: fallidos,
+        clientes: clientesAEnviar.map(c => ({
+          ID: c.ID,
+          NOMBRE: c.NOMBRE,
+          CELULAR: c.CELULAR
+        }))
+      });
+      
+      // Habilitar botón cerrar
+      document.getElementById('closeProgressBtn').disabled = false;
+      document.getElementById('closeProgressBtn').textContent = '✅ Completado - Cerrar';
+      document.getElementById('closeProgressBtn').classList.remove('bg-gray-300', 'text-gray-600');
+      document.getElementById('closeProgressBtn').classList.add('bg-brand-orange', 'text-white', 'hover:bg-orange-600');
+      
+      // Limpiar formulario y selección
+      appData.clientesSeleccionados.clear();
+      renderizarClientes();
+      actualizarEstadisticas();
+      actualizarBotonEnviar();
+    }
+
+    async function enviarWhatsApp(celular, mensaje, imagenUrl = null) {
+      try {
+        const payload = {
+          messages: {
+            content: mensaje
+          },
+          number: celular.toString(),
+          checkIfExists: false
+        };
+        
+        if (imagenUrl) {
+          payload.messages.mediaUrl = imagenUrl;
+        }
+        
+        const response = await fetch(BUILDERBOT_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-builderbot': BUILDERBOT_KEY
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (response.ok || response.status === 200 || response.status === 201) {
+          return { success: true };
+        } else {
+          const error = await response.text();
+          throw new Error(error);
+        }
       } catch (error) {
-        console.error('❌ Error al enviar:', error);
-        document.getElementById('progressDetails').innerHTML = `
-          <div class="text-red-600 text-center">
-            <p class="font-bold">❌ Error</p>
-            <p class="text-sm mt-2">${error.message}</p>
-          </div>
-        `;
-        document.getElementById('closeProgressBtn').classList.remove('hidden');
+        return { success: false, error: error.message };
+      }
+    }
+
+    function guardarEnHistorial(entrada) {
+      entrada.id = Date.now();
+      appData.historial.unshift(entrada);
+      
+      // Guardar en localStorage
+      try {
+        localStorage.setItem('somarPromoHistorial', JSON.stringify(appData.historial));
+      } catch (error) {
+        console.error('Error guardando historial:', error);
       }
     }
 
@@ -795,23 +817,36 @@
     // ============================================
 
     async function subirImagenCloudinary(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const base64Data = event.target.result;
-          
-          try {
-            const resultado = await callGoogleScript('subirImagenCloudinary', base64Data);
-            resolve(resultado);
-          } catch (error) {
-            resolve({
-              success: false,
-              error: error.message
-            });
+      try {
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error('La imagen es muy grande. Máximo 5MB');
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+        formData.append('folder', 'PROMOS_SOMAR');
+        
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+          {
+            method: 'POST',
+            body: formData
           }
-        };
-        reader.readAsDataURL(file);
-      });
+        );
+        
+        const data = await response.json();
+        
+        if (data.secure_url) {
+          return { success: true, url: data.secure_url };
+        } else {
+          throw new Error('Error al subir imagen');
+        }
+      } catch (error) {
+        console.error('Error subiendo imagen:', error);
+        return { success: false, error: error.message };
+      }
     }
 
     // ============================================
@@ -923,14 +958,30 @@
       document.getElementById('totalClientes').textContent = appData.clientes.length;
       document.getElementById('clientesSeleccionados').textContent = appData.clientesSeleccionados.size;
       
-      // Envíos hoy
-      const hoy = new Date().toISOString().split('T')[0];
-      const enviosHoy = appData.historial.filter(h => {
-        const fechaEntrada = new Date(h.fecha).toISOString().split('T')[0];
-        return fechaEntrada === hoy;
-      }).reduce((sum, h) => sum + h.exitosos, 0);
-      
-      document.getElementById('enviosHoy').textContent = enviosHoy;
+      // Envíos hoy - con manejo seguro de fechas
+      try {
+        const hoy = new Date();
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+        
+        const enviosHoy = appData.historial.filter(h => {
+          if (!h.fecha) return false;
+          
+          try {
+            const fechaEntrada = new Date(h.fecha);
+            if (isNaN(fechaEntrada.getTime())) return false;
+            
+            const fechaStr = `${fechaEntrada.getFullYear()}-${String(fechaEntrada.getMonth() + 1).padStart(2, '0')}-${String(fechaEntrada.getDate()).padStart(2, '0')}`;
+            return fechaStr === hoyStr;
+          } catch (e) {
+            return false;
+          }
+        }).reduce((sum, h) => sum + (h.exitosos || 0), 0);
+        
+        document.getElementById('enviosHoy').textContent = enviosHoy;
+      } catch (error) {
+        console.error('Error calculando envíos hoy:', error);
+        document.getElementById('enviosHoy').textContent = '0';
+      }
     }
 
     function actualizarBotonEnviar() {
@@ -952,19 +1003,8 @@
       document.getElementById('filtroColonia').addEventListener('change', aplicarFiltros);
       
       // Selección
-      document.getElementById('seleccionarTodos').addEventListener('click', () => {
-        appData.clientesFiltrados.forEach(c => appData.clientesSeleccionados.add(c.ID));
-        renderizarClientes();
-        actualizarEstadisticas();
-        actualizarBotonEnviar();
-      });
-      
-      document.getElementById('limpiarSeleccion').addEventListener('click', () => {
-        appData.clientesSeleccionados.clear();
-        renderizarClientes();
-        actualizarEstadisticas();
-        actualizarBotonEnviar();
-      });
+      document.getElementById('seleccionarTodos').addEventListener('click', seleccionarTodos);
+      document.getElementById('limpiarSeleccion').addEventListener('click', limpiarSeleccion);
       
       // Mensaje
       const mensajeTexto = document.getElementById('mensajeTexto');
