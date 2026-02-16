@@ -274,6 +274,14 @@
             </div>
           </div>
 
+          <!-- Botón de prueba API -->
+          <button id="testApiBtn" class="w-full bg-blue-500 text-white py-2 rounded-xl font-semibold hover:bg-blue-600 transition mb-3 flex items-center justify-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            🧪 Probar Conexión BuilderBot
+          </button>
+
           <!-- Botón enviar -->
           <button id="enviarMensajes" disabled class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -642,6 +650,81 @@
     }
 
     // ============================================
+    // PRUEBA DE API BUILDERBOT
+    // ============================================
+
+    async function probarApiBuilderBot() {
+      const btn = document.getElementById('testApiBtn');
+      const originalHtml = btn.innerHTML;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<div class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> Probando...';
+      
+      try {
+        console.log('🧪 === PRUEBA DE API BUILDERBOT ===');
+        console.log('API:', BUILDERBOT_API);
+        console.log('KEY:', BUILDERBOT_KEY.substring(0, 10) + '...');
+        
+        // Mensaje de prueba
+        const testPayload = {
+          messages: {
+            content: "🧪 Prueba de conexión BuilderBot - Sistema de Promos Somar Express"
+          },
+          number: "50432032345", // Número de prueba genérico
+          checkIfExists: false
+        };
+        
+        console.log('📦 Payload:', JSON.stringify(testPayload, null, 2));
+        
+        const response = await fetch(BUILDERBOT_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-builderbot': BUILDERBOT_KEY
+          },
+          body: JSON.stringify(testPayload)
+        });
+        
+        const responseText = await response.text();
+        
+        console.log('📥 Status:', response.status);
+        console.log('📥 Response:', responseText);
+        
+        if (response.ok || response.status === 200 || response.status === 201) {
+          btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+          btn.classList.add('bg-green-500');
+          btn.innerHTML = '✅ Conexión Exitosa!';
+          
+          alert(`✅ ¡Conexión Exitosa con BuilderBot!\n\nStatus: ${response.status}\nRespuesta: ${responseText}\n\n✨ El sistema está listo para enviar mensajes.`);
+          
+          setTimeout(() => {
+            btn.classList.remove('bg-green-500');
+            btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+          }, 3000);
+        } else {
+          throw new Error(`Error ${response.status}: ${responseText}`);
+        }
+      } catch (error) {
+        console.error('❌ Error en prueba:', error);
+        
+        btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        btn.classList.add('bg-red-500');
+        btn.innerHTML = '❌ Error de Conexión';
+        
+        alert(`❌ Error de Conexión con BuilderBot\n\n${error.message}\n\nRevisa:\n1. API URL correcta\n2. API KEY correcta\n3. Console (F12) para más detalles`);
+        
+        setTimeout(() => {
+          btn.classList.remove('bg-red-500');
+          btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+        }, 3000);
+      }
+    }
+
+    // ============================================
     // ENVÍO DE MENSAJES
     // ============================================
 
@@ -771,17 +854,30 @@
 
     async function enviarWhatsApp(celular, mensaje, imagenUrl = null) {
       try {
+        // Asegurar que el número tenga el formato correcto
+        // Si no tiene código de país, agregar 504 (Honduras)
+        let numeroFormateado = celular.toString().replace(/\D/g, ''); // Solo números
+        
+        // Si el número es de 8 dígitos, agregar código de país 504
+        if (numeroFormateado.length === 8) {
+          numeroFormateado = '504' + numeroFormateado;
+        }
+        
         const payload = {
           messages: {
             content: mensaje
           },
-          number: celular.toString(),
+          number: numeroFormateado,
           checkIfExists: false
         };
         
-        if (imagenUrl) {
+        // Solo agregar mediaUrl si existe
+        if (imagenUrl && imagenUrl.trim() !== '') {
           payload.messages.mediaUrl = imagenUrl;
         }
+        
+        console.log('📤 Enviando a:', numeroFormateado);
+        console.log('📝 Mensaje:', mensaje.substring(0, 50) + '...');
         
         const response = await fetch(BUILDERBOT_API, {
           method: 'POST',
@@ -792,13 +888,20 @@
           body: JSON.stringify(payload)
         });
         
+        const responseText = await response.text();
+        
+        console.log('📥 Status:', response.status);
+        console.log('📥 Response:', responseText);
+        
         if (response.ok || response.status === 200 || response.status === 201) {
+          console.log('✅ Mensaje enviado correctamente');
           return { success: true };
         } else {
-          const error = await response.text();
-          throw new Error(error);
+          console.error('❌ Error del servidor:', responseText);
+          throw new Error(`BuilderBot error: ${responseText}`);
         }
       } catch (error) {
+        console.error('❌ Error en enviarWhatsApp:', error);
         return { success: false, error: error.message };
       }
     }
@@ -1008,6 +1111,9 @@
       // Selección
       document.getElementById('seleccionarTodos').addEventListener('click', seleccionarTodos);
       document.getElementById('limpiarSeleccion').addEventListener('click', limpiarSeleccion);
+      
+      // Test API BuilderBot
+      document.getElementById('testApiBtn').addEventListener('click', probarApiBuilderBot);
       
       // Mensaje
       const mensajeTexto = document.getElementById('mensajeTexto');
