@@ -554,16 +554,25 @@
       
       // Filtro de pedidos
       const pedidosOperador = document.getElementById('filtroPedidosOperador').value;
-      const pedidosCantidad = parseInt(document.getElementById('filtroPedidosCantidad').value) || 0;
+      const pedidosCantidadInput = document.getElementById('filtroPedidosCantidad').value;
+      const pedidosCantidad = pedidosCantidadInput !== '' ? parseInt(pedidosCantidadInput) : null;
+      
+      console.log('🔍 Filtros aplicados:', {
+        searchNombre,
+        filtroCiudad,
+        filtroColonia,
+        pedidosOperador,
+        pedidosCantidad
+      });
       
       appData.clientesFiltrados = appData.clientes.filter(cliente => {
         const matchNombre = !searchNombre || cliente.NOMBRE.toLowerCase().includes(searchNombre);
         const matchCiudad = !filtroCiudad || cliente.CIUDAD === filtroCiudad;
         const matchColonia = !filtroColonia || cliente['COLONIA/SECTOR'] === filtroColonia;
         
-        // Filtro de pedidos
+        // Filtro de pedidos - solo aplicar si hay operador Y cantidad
         let matchPedidos = true;
-        if (pedidosOperador && pedidosCantidad >= 0) {
+        if (pedidosOperador && pedidosCantidad !== null) {
           const pedidos = cliente.PEDIDOS || 0;
           
           switch (pedidosOperador) {
@@ -587,6 +596,8 @@
         
         return matchNombre && matchCiudad && matchColonia && matchPedidos;
       });
+      
+      console.log('📊 Resultados:', appData.clientesFiltrados.length, 'de', appData.clientes.length);
       
       // Aplicar ordenamiento
       aplicarOrdenamiento();
