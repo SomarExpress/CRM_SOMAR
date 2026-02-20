@@ -745,22 +745,6 @@
     // FILTROS
     // ============================================
 
-    function aplicarFiltros() {
-      const nombreBusqueda = document.getElementById('searchNombre').value.toLowerCase();
-      const ciudadFiltro = document.getElementById('filtroCiudad').value;
-      const coloniaFiltro = document.getElementById('filtroColonia').value;
-      
-      appData.clientesFiltrados = appData.clientes.filter(cliente => {
-        const matchNombre = !nombreBusqueda || (cliente.NOMBRE || '').toLowerCase().includes(nombreBusqueda);
-        const matchCiudad = !ciudadFiltro || cliente.CIUDAD === ciudadFiltro;
-        const matchColonia = !coloniaFiltro || cliente['COLONIA/SECTOR'] === coloniaFiltro;
-        
-        return matchNombre && matchCiudad && matchColonia;
-      });
-      
-      renderizarClientes();
-    }
-
     // ============================================
     // SELECCIÓN DE CLIENTES
     // ============================================
