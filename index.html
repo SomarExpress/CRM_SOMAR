@@ -216,7 +216,33 @@
 
               <div class="flex items-end">
                 <div class="text-xs text-gray-500 px-2">
-                  Combina filtros para buscar clientes específicos
+                  Cantidad de pedidos realizados
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtro de Días desde Último Pedido -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700">📅 Días desde último pedido</label>
+                <select id="filtroDiasOperador" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition bg-white text-sm">
+                  <option value="">Sin filtro</option>
+                  <option value="igual">Igual a</option>
+                  <option value="mayor">Mayor que (más inactivos)</option>
+                  <option value="menor">Menor que (más activos)</option>
+                  <option value="mayor_igual">Mayor o igual a</option>
+                  <option value="menor_igual">Menor o igual a</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700">Días</label>
+                <input type="number" id="filtroDiasCantidad" min="0" placeholder="Ej: 30" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition text-sm">
+              </div>
+
+              <div class="flex items-end">
+                <div class="text-xs text-gray-500 px-2">
+                  Días transcurridos desde su último pedido
                 </div>
               </div>
             </div>
@@ -235,6 +261,8 @@
                   <option value="colonia_desc">Colonia/Sector (Z-A)</option>
                   <option value="pedidos">Pedidos (Menor a Mayor)</option>
                   <option value="pedidos_desc">Pedidos (Mayor a Menor)</option>
+                  <option value="dias">Días Último Pedido (Más Activos)</option>
+                  <option value="dias_desc">Días Último Pedido (Más Inactivos)</option>
                   <option value="fecha">Fecha Registro (Más Antiguos)</option>
                   <option value="fecha_desc">Fecha Registro (Más Recientes)</option>
                 </select>
@@ -557,12 +585,19 @@
       const pedidosCantidadInput = document.getElementById('filtroPedidosCantidad').value;
       const pedidosCantidad = pedidosCantidadInput !== '' ? parseInt(pedidosCantidadInput) : null;
       
+      // Filtro de días
+      const diasOperador = document.getElementById('filtroDiasOperador').value;
+      const diasCantidadInput = document.getElementById('filtroDiasCantidad').value;
+      const diasCantidad = diasCantidadInput !== '' ? parseInt(diasCantidadInput) : null;
+      
       console.log('🔍 Filtros aplicados:', {
         searchNombre,
         filtroCiudad,
         filtroColonia,
         pedidosOperador,
-        pedidosCantidad
+        pedidosCantidad,
+        diasOperador,
+        diasCantidad
       });
       
       appData.clientesFiltrados = appData.clientes.filter(cliente => {
@@ -594,7 +629,35 @@
           }
         }
         
-        return matchNombre && matchCiudad && matchColonia && matchPedidos;
+        // Filtro de días - solo aplicar si hay operador Y cantidad
+        let matchDias = true;
+        if (diasOperador && diasCantidad !== null) {
+          const dias = cliente.DIAS_ULTIMO_PEDIDO;
+          
+          // Si el cliente nunca ha pedido, dias será null
+          // Para filtros, tratamos null como infinito días
+          const diasComparar = dias !== null ? dias : 999999;
+          
+          switch (diasOperador) {
+            case 'igual':
+              matchDias = dias !== null && dias === diasCantidad;
+              break;
+            case 'mayor':
+              matchDias = diasComparar > diasCantidad;
+              break;
+            case 'menor':
+              matchDias = dias !== null && dias < diasCantidad;
+              break;
+            case 'mayor_igual':
+              matchDias = diasComparar >= diasCantidad;
+              break;
+            case 'menor_igual':
+              matchDias = dias !== null && dias <= diasCantidad;
+              break;
+          }
+        }
+        
+        return matchNombre && matchCiudad && matchColonia && matchPedidos && matchDias;
       });
       
       console.log('📊 Resultados:', appData.clientesFiltrados.length, 'de', appData.clientes.length);
@@ -633,6 +696,17 @@
           case 'pedidos_desc':
             return (b.PEDIDOS || 0) - (a.PEDIDOS || 0);
             
+          case 'dias':
+            // Más activos primero (menos días)
+            const diasA = a.DIAS_ULTIMO_PEDIDO !== null ? a.DIAS_ULTIMO_PEDIDO : 999999;
+            const diasB = b.DIAS_ULTIMO_PEDIDO !== null ? b.DIAS_ULTIMO_PEDIDO : 999999;
+            return diasA - diasB;
+          case 'dias_desc':
+            // Más inactivos primero (más días)
+            const diasA2 = a.DIAS_ULTIMO_PEDIDO !== null ? a.DIAS_ULTIMO_PEDIDO : 999999;
+            const diasB2 = b.DIAS_ULTIMO_PEDIDO !== null ? b.DIAS_ULTIMO_PEDIDO : 999999;
+            return diasB2 - diasA2;
+            
           case 'fecha':
             const fechaA = a.FECHA_REGISTRO ? new Date(a.FECHA_REGISTRO).getTime() : 0;
             const fechaB = b.FECHA_REGISTRO ? new Date(b.FECHA_REGISTRO).getTime() : 0;
@@ -654,6 +728,8 @@
       document.getElementById('filtroColonia').value = '';
       document.getElementById('filtroPedidosOperador').value = '';
       document.getElementById('filtroPedidosCantidad').value = '';
+      document.getElementById('filtroDiasOperador').value = '';
+      document.getElementById('filtroDiasCantidad').value = '';
       document.getElementById('ordenarPor').value = '';
       aplicarFiltros();
     }
@@ -706,12 +782,24 @@
       container.innerHTML = appData.clientesFiltrados.map(cliente => {
         const isSelected = appData.clientesSeleccionados.has(cliente.ID);
         const pedidos = cliente.PEDIDOS || 0;
+        const dias = cliente.DIAS_ULTIMO_PEDIDO;
         
         // Color del badge según cantidad de pedidos
         let badgeClass = 'bg-gray-100 text-gray-600';
         if (pedidos >= 10) badgeClass = 'bg-green-100 text-green-700';
         else if (pedidos >= 5) badgeClass = 'bg-blue-100 text-blue-700';
         else if (pedidos >= 1) badgeClass = 'bg-yellow-100 text-yellow-700';
+        
+        // Color del badge de días según inactividad
+        let diasBadgeClass = 'bg-gray-100 text-gray-600';
+        let diasTexto = 'Nunca';
+        if (dias !== null) {
+          diasTexto = `Hace ${dias}d`;
+          if (dias <= 7) diasBadgeClass = 'bg-green-100 text-green-700';
+          else if (dias <= 30) diasBadgeClass = 'bg-blue-100 text-blue-700';
+          else if (dias <= 90) diasBadgeClass = 'bg-yellow-100 text-yellow-700';
+          else diasBadgeClass = 'bg-red-100 text-red-700';
+        }
         
         return `
           <div class="client-card border-2 ${isSelected ? 'selected-client' : 'border-gray-200'} rounded-xl p-3" onclick="toggleCliente('${cliente.ID}')">
@@ -723,9 +811,12 @@
                 </div>
                 <p class="text-xs text-gray-600">📱 ${cliente.CELULAR}</p>
                 <p class="text-xs text-gray-500">📍 ${cliente.CIUDAD} - ${cliente['COLONIA/SECTOR'] || 'N/A'}</p>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
                   <span class="text-xs px-2 py-0.5 ${badgeClass} rounded-full font-semibold">
                     📦 ${pedidos} pedido${pedidos !== 1 ? 's' : ''}
+                  </span>
+                  <span class="text-xs px-2 py-0.5 ${diasBadgeClass} rounded-full font-semibold">
+                    ⏰ ${diasTexto}
                   </span>
                 </div>
               </div>
@@ -1284,6 +1375,8 @@
       document.getElementById('filtroColonia').addEventListener('change', aplicarFiltros);
       document.getElementById('filtroPedidosOperador').addEventListener('change', aplicarFiltros);
       document.getElementById('filtroPedidosCantidad').addEventListener('input', aplicarFiltros);
+      document.getElementById('filtroDiasOperador').addEventListener('change', aplicarFiltros);
+      document.getElementById('filtroDiasCantidad').addEventListener('input', aplicarFiltros);
       document.getElementById('ordenarPor').addEventListener('change', aplicarFiltros);
       document.getElementById('limpiarFiltros').addEventListener('click', limpiarTodosFiltros);
       
