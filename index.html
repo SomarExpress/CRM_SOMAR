@@ -215,8 +215,34 @@
               </div>
 
               <div class="flex items-end">
+                <div class="text-xs text-gray-500 px-2">
+                  Combina filtros para buscar clientes específicos
+                </div>
+              </div>
+            </div>
+
+            <!-- Ordenamiento -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-200">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700">🔃 Ordenar por</label>
+                <select id="ordenarPor" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-brand-orange focus:outline-none transition bg-white text-sm">
+                  <option value="">Sin ordenar</option>
+                  <option value="nombre">Nombre (A-Z)</option>
+                  <option value="nombre_desc">Nombre (Z-A)</option>
+                  <option value="ciudad">Ciudad (A-Z)</option>
+                  <option value="ciudad_desc">Ciudad (Z-A)</option>
+                  <option value="colonia">Colonia/Sector (A-Z)</option>
+                  <option value="colonia_desc">Colonia/Sector (Z-A)</option>
+                  <option value="pedidos">Pedidos (Menor a Mayor)</option>
+                  <option value="pedidos_desc">Pedidos (Mayor a Menor)</option>
+                  <option value="fecha">Fecha Registro (Más Antiguos)</option>
+                  <option value="fecha_desc">Fecha Registro (Más Recientes)</option>
+                </select>
+              </div>
+
+              <div class="flex items-end">
                 <button id="limpiarFiltros" class="w-full bg-gray-200 text-gray-700 py-2 rounded-xl font-semibold hover:bg-gray-300 transition text-sm">
-                  🔄 Limpiar Filtros
+                  🔄 Limpiar Todo
                 </button>
               </div>
             </div>
@@ -562,8 +588,53 @@
         return matchNombre && matchCiudad && matchColonia && matchPedidos;
       });
       
+      // Aplicar ordenamiento
+      aplicarOrdenamiento();
+      
       renderizarClientes();
       actualizarEstadisticas();
+    }
+
+    function aplicarOrdenamiento() {
+      const ordenarPor = document.getElementById('ordenarPor').value;
+      
+      if (!ordenarPor) return;
+      
+      appData.clientesFiltrados.sort((a, b) => {
+        switch (ordenarPor) {
+          case 'nombre':
+            return (a.NOMBRE || '').localeCompare(b.NOMBRE || '');
+          case 'nombre_desc':
+            return (b.NOMBRE || '').localeCompare(a.NOMBRE || '');
+            
+          case 'ciudad':
+            return (a.CIUDAD || '').localeCompare(b.CIUDAD || '');
+          case 'ciudad_desc':
+            return (b.CIUDAD || '').localeCompare(a.CIUDAD || '');
+            
+          case 'colonia':
+            return (a['COLONIA/SECTOR'] || '').localeCompare(b['COLONIA/SECTOR'] || '');
+          case 'colonia_desc':
+            return (b['COLONIA/SECTOR'] || '').localeCompare(a['COLONIA/SECTOR'] || '');
+            
+          case 'pedidos':
+            return (a.PEDIDOS || 0) - (b.PEDIDOS || 0);
+          case 'pedidos_desc':
+            return (b.PEDIDOS || 0) - (a.PEDIDOS || 0);
+            
+          case 'fecha':
+            const fechaA = a.FECHA_REGISTRO ? new Date(a.FECHA_REGISTRO).getTime() : 0;
+            const fechaB = b.FECHA_REGISTRO ? new Date(b.FECHA_REGISTRO).getTime() : 0;
+            return fechaA - fechaB;
+          case 'fecha_desc':
+            const fechaA2 = a.FECHA_REGISTRO ? new Date(a.FECHA_REGISTRO).getTime() : 0;
+            const fechaB2 = b.FECHA_REGISTRO ? new Date(b.FECHA_REGISTRO).getTime() : 0;
+            return fechaB2 - fechaA2;
+            
+          default:
+            return 0;
+        }
+      });
     }
 
     function limpiarTodosFiltros() {
@@ -572,6 +643,7 @@
       document.getElementById('filtroColonia').value = '';
       document.getElementById('filtroPedidosOperador').value = '';
       document.getElementById('filtroPedidosCantidad').value = '';
+      document.getElementById('ordenarPor').value = '';
       aplicarFiltros();
     }
 
@@ -1217,6 +1289,7 @@
       document.getElementById('filtroColonia').addEventListener('change', aplicarFiltros);
       document.getElementById('filtroPedidosOperador').addEventListener('change', aplicarFiltros);
       document.getElementById('filtroPedidosCantidad').addEventListener('input', aplicarFiltros);
+      document.getElementById('ordenarPor').addEventListener('change', aplicarFiltros);
       document.getElementById('limpiarFiltros').addEventListener('click', limpiarTodosFiltros);
       
       // Selección
